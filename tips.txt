@@ -1,0 +1,12 @@
+to compile file: 'c(fileName).'
+to run method in compiledFile: 'fileName:methodName(methodArgs).'
+to run all test suites: 'ct:run_test([{suite, "./fileName"}, {logdir, "./directoryWhereToStoreTestResults"}]).'
+
+ct:run_test([{suite, "./test"}, {logdir, "./testResults"}]).
+
+
+to run on terminal. 
+make bat file
+from terminal: 'fileName.bat' manager
+
+pscp -r C:\Users\Sander\Documents\1the_mast\multicore\projects\erlang\src salenaer@serenity.vub.ac.be:/home/salenaer
