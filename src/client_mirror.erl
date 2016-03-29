@@ -1,13 +1,14 @@
 -module(client_mirror).
 -include_lib("eunit/include/eunit.hrl").
 
--export([create_new_mirror/4, recreate_mirror/5, client_mirror/5]).
+-export([create_mirror/5, client_mirror/5]).
 
-create_new_mirror(ClientId, UserName, ChannelService, ClientService) ->
-    spawn(?MODULE, client_mirror, [ClientId, UserName, dict:new(), ChannelService, ClientService]).
-
-recreate_mirror(ClientId, UserName, ChannelService, ClientService, Channels) ->
+create_mirror(ClientId, UserName, ChannelService, ClientService, Channels) ->
     Mirror = spawn(?MODULE, client_mirror, [ClientId, UserName, Channels, ChannelService, ClientService]),
+    dict:map(fun(ChannelName, ChannelId)->
+                ChannelId ! {self(), add_user, ChannelName, ClientId} end, Channels),
+    dict:map(fun(ChannelName, ChannelId)->
+                receive {ChannelId, channel_joined, ChannelName} -> ok end end, Channels),
     ClientId ! {Mirror, logged_in}.
 
 % ClientId = Id of client

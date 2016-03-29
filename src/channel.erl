@@ -20,10 +20,11 @@ channel_actor(ChannelName, History, Users)->
 		{_, remove_user, ChannelName, UserId} ->
 			NewUsers = lists:delete(UserId, Users),
 			channel_actor(ChannelName, History, NewUsers);
-		{ClientId, send_message, UserName, ChannelName, Message, Time} ->
-			lists:foreach(fun(UserId)->(
+		{SenderId, send_message, UserName, ChannelName, Message, Time} ->
+			lists:foreach(fun(FollowerId)->(
 				if 
-					UserId /= ClientId -> UserId ! {self(), new_message, {message, UserName, ChannelName, Message, Time}};
+					FollowerId /= SenderId -> 
+						FollowerId ! {self(), new_message, {message, UserName, ChannelName, Message, Time}};
 					true -> false
 				end) end, Users),
 			channel_actor(ChannelName, [{message, UserName, ChannelName, Message, Time}|History], Users);

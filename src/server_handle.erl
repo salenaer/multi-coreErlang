@@ -26,7 +26,7 @@ server_handle(ChannelService, Clients) ->
         {Client, log_in, UserName} -> 
             case dict:find(UserName, Clients) of
                 {ok, {user, UserName, Channels}} -> 
-                    client_mirror:recreate_mirror(Client, UserName, ChannelService, self(), Channels),
+                    spawn(fun()->client_mirror:create_mirror(Client, UserName, ChannelService, self(), Channels) end),
                     NewClients = dict:erase(UserName, Clients),
                     server_handle(ChannelService, NewClients);
                 error -> 
