@@ -8,7 +8,7 @@ create_benchmark_client(UserName, SID)->
 
 benchmark_online_client(TargetId, ServerId, BenchmarkId, UserName) ->
     receive
-        {_, new_message, Message}->
+        {_, new_message, _Message}->
             BenchmarkId ! {UserName, received_message},
             benchmark_online_client(TargetId, ServerId, BenchmarkId, UserName);
         {SenderId, join_channel, ChannelName} ->
@@ -20,8 +20,8 @@ benchmark_online_client(TargetId, ServerId, BenchmarkId, UserName) ->
             SenderId ! {UserName, logged_out},
             benchmark_offline_client(ServerId, ServerId, UserName);
         {SenderId, get_channel_history, ChannelName}->
-            History = server:get_channel_history(TargetId, ChannelName),
-            SenderId ! {UserName, channel_history, History},
+            _History = server:get_channel_history(TargetId, ChannelName),
+            SenderId ! {UserName, received_history, ChannelName},
             benchmark_online_client(TargetId, ServerId, BenchmarkId, UserName);
         {SenderId, send_message, ChannelName, MessageText} ->
             server:send_message(TargetId, UserName, ChannelName, MessageText),

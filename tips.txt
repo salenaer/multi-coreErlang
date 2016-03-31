@@ -10,3 +10,5 @@ make bat file
 from terminal: 'fileName.bat' manager
 
 pscp -r C:\Users\Sander\Documents\1the_mast\multicore\projects\erlang\src salenaer@serenity.vub.ac.be:/home/salenaer
+
+om cores te meten htop openen in ander scherm

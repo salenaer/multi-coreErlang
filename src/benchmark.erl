@@ -3,7 +3,7 @@
 
 -export([send_message_random_sparce/0, send_message_random_dense/0, 
         send_message_structured_sparce/0, send_message_structured_dense/0,
-        measure_latency/0]).
+        send_message_worst_case/0, measure_latency/0, measure_channel_history/0]).
 
 %% Benchmark helpers
 
@@ -153,6 +153,7 @@ test_send_message(InitializeFunction, ActiveUsersFunction, BenchmarkText) ->
 
 % Send a message for each of the 1000 active users, and wait for all of them to be broadcast and received
 % (repeated 30 times).
+%average case, some channels with many users, some channels with few users.
 send_message_random_sparce()->
     InitializeFunction=fun()->initialize_server_random_channels(10, 1000, 3) end,
     ActiveUsersFunction=fun(Users)->Users end,
@@ -163,6 +164,7 @@ send_message_random_dense()->
     ActiveUsersFunction=fun(Users)->Users end,
     test_send_message(InitializeFunction, ActiveUsersFunction, "send message random dense").
 
+%best case, every channel with equal amount of people.
 send_message_structured_sparce()->
     UserToChannelFunction=fun(User)->quarter_distribution(User) end,
     InitializeFunction=fun()->initialize_server_structured(12, 1000, UserToChannelFunction) end,
@@ -174,6 +176,15 @@ send_message_structured_dense()->
     InitializeFunction=fun()->initialize_server_structured(12, 1000, UserToChannelFunction) end,
     ActiveUsersFunction=fun(Users)->Users end,
     test_send_message(InitializeFunction, ActiveUsersFunction, "send message structured dense").
+
+%worst case, every user subscribed to every channel. One actor has to answer all users
+send_message_worst_case()->
+    NumberOfChannels = 12,
+    UserToChannelFunction=fun(_User)->lists:seq(1, NumberOfChannels)  end,
+    InitializeFunction=fun()->initialize_server_structured(NumberOfChannels, 1000, UserToChannelFunction) end,
+    ActiveUsersFunction=fun(Users)->Users end,
+    test_send_message(InitializeFunction, ActiveUsersFunction, "send message structured dense").
+
 
 quarter_distribution(User)->
     SingleDigit = User rem 10,
@@ -221,7 +232,34 @@ measure_latency()->
     ActiveUsersFunction=fun(Users)->Users end,
     latency(ActiveUsersFunction, "measure latency").    
 
+%check how long it takes to receive the channel history
+channel_history(BenchmarkText) ->
+    NumberOfChannels = 10000,
+    UserToChannelFunction=fun(_User)->lists:seq(1, NumberOfChannels) end, %every user is subscribed to every channel
+    run_benchmark(BenchmarkText,
+        fun () ->
+            BenchmarkPid = self(),
+            {ServerPid, _Channels, Users} = initialize_server_structured(NumberOfChannels, 1, UserToChannelFunction),
+            Clients = login_users(ServerPid, Users, BenchmarkPid),
+            
+            %user 1 asks channel history
+            {Client, ClientChannels} = dict:fetch(1, Clients),
 
+            Client ! {self(), get_channel_history, 1},
+            %ask to get channel history of every channel
+            lists:map(fun (ChannelName)->
+                        Client ! {self(), get_channel_history, ChannelName}
+                    end,
+                ClientChannels),  
+            %check if every channel has returned history
+            lists:map(fun (ChannelName)->
+                        receive {1, received_history, ChannelName} -> ok end
+                    end,
+                ClientChannels) end,       
+        30).
+
+measure_channel_history()->
+    channel_history("get channel history").
 
 % Helper function: get random channel from the set of channels
 get_channel(Channels)->
